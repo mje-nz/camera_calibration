@@ -31,6 +31,7 @@ import argparse
 import os
 import math
 import sys
+from pathlib import Path
 
 import numpy as np
 from scipy.misc import imread
@@ -84,7 +85,7 @@ def parse_paper_size(paper_size):
 if __name__ == '__main__':
   # Define arguments
   parser = argparse.ArgumentParser(description="Create calibration patterns.")
-  parser.add_argument("--tag36h11_path", required=True,
+  parser.add_argument("--tag36h11_path", default=str(Path(__file__).parent / "tag36h11"),
                       help="Path to a folder containing the 36h11 AprilTag images. May be downloaded from: https://github.com/AprilRobotics/apriltag-imgs")
   parser.add_argument("--output_base_path", required=True,
                       help="Base path to the PDF and YAML output files (excluding the file extensions).")
