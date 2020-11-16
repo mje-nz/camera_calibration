@@ -35,11 +35,13 @@ import sys
 import numpy as np
 from scipy.misc import imread
 
-# This requires reportlab, installed like this:
-# sudo pip3 install reportlab
+# This requires reportlab and scipy<1.2, installed like this:
+# sudo pip3 install reportlab 'scipy<1.2'
+
 from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import letter, A4
+from reportlab.lib import pagesizes
 from reportlab.lib.units import inch, cm, mm
+
 
 def GetStarCoord(square_length, i, num_star_segments, center_x, center_y):
   angle = (2 * math.pi) * i / num_star_segments
@@ -54,6 +56,31 @@ def GetStarCoord(square_length, i, num_star_segments, center_x, center_y):
           center_y + 0.5 * square_length * y)
 
 
+UNITS = {"mm": mm, "cm": cm, "in": inch, "pt": 1}
+
+
+def parse_paper_size(paper_size):
+  """Parse a paper size argument, returning (width, height) in pt."""
+  if paper_size[0] in "ABC" or paper_size == "letter":
+    try:
+      return getattr(pagesizes, paper_size)
+    except AttributeError:
+      pass
+  if "x" in paper_size:
+    paper_width, height_unit = paper_size.split("x")
+    if height_unit[-2:] in UNITS:
+      unit = UNITS[height_unit[-2:]]
+      paper_height = height_unit[:-2]
+    elif height_unit.endswith("inch"):
+      unit = inch
+      paper_height = height_unit[:-4]
+    else:
+      raise ValueError("Unknown paper size " + paper_size)
+    paper_width = float(paper_width) * unit
+    paper_height = float(paper_height) * unit
+    return paper_width, paper_height
+
+
 if __name__ == '__main__':
   # Define arguments
   parser = argparse.ArgumentParser(description="Create calibration patterns.")
@@ -62,7 +89,7 @@ if __name__ == '__main__':
   parser.add_argument("--output_base_path", required=True,
                       help="Base path to the PDF and YAML output files (excluding the file extensions).")
   parser.add_argument("--paper_size", default="A4",
-                      help="Paper size; supported values: A4, letter.")
+                      help="Paper size; supported values: A[0-10], letter, <width>x<height>[mm,cm,in,pt].")
   parser.add_argument("--num_star_segments", default="16",
                       help="Number of segments of each star in the pattern. Refers to the sum of black and white segments. 4 would give a checkerboard.")
   parser.add_argument("--apriltag_index", default="0",
@@ -82,14 +109,10 @@ if __name__ == '__main__':
   margin_in_cm = float(args.margin_in_cm)
   approx_square_length_in_cm = float(args.approx_square_length_in_cm)
   apriltag_length_in_squares = int(args.apriltag_length_in_squares)
-  
-  pagesize = A4
-  if args.paper_size == "A4":
-    pagesize = A4
-  elif args.paper_size == "letter":
-    pagesize = letter
-  else:
-    print("Error: The given paper size (" + args.paper_size + ") must be either A4 or letter.")
+  try:
+    pagesize = parse_paper_size(args.paper_size)
+  except ValueError as e:
+    print("Error:", e)
     sys.exit(1)
   
   pdf_path = args.output_base_path + '.pdf'
