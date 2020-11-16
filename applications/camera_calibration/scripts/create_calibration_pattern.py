@@ -101,6 +101,8 @@ if __name__ == '__main__':
                       help="Approximate star square length in centimeters. May get slightly modified such that the squares exactly fit into the print area.")
   parser.add_argument("--apriltag_length_in_squares", default="4",
                       help="Length of the AprilTag measured in star squares.")
+  parser.add_argument("--footer", action="store_true",
+                      help="Add descriptive footer text in bottom margin.")
   
   # Parse and check arguments
   args = parser.parse_args()
@@ -162,6 +164,20 @@ if __name__ == '__main__':
   
   unused_y = print_area_height - squares_y * square_length
   pattern_start_y = start_y - 0.5 * unused_y
+
+
+  # Draw footer in the bottom margin
+  if args.footer:
+    footer = "{}x{} {:.2f}mm".format(squares_x, squares_y, square_length / mm)
+    footer += " {}-segment stars".format(num_star_segments)
+    footer += ", with {}-square tag36h11 #{}".format(apriltag_length_in_squares, apriltag_index)
+    footer += ", on {} paper with {:.2f}mm margin".format(args.paper_size, margin_in_cm * 10)
+    font_size = 12
+    c.setFontSize(font_size)
+    footer_start_x = pattern_start_x
+    footer_start_y = margin / 2 + font_size / 2
+    c.drawString(footer_start_x, footer_start_y, footer)
+
   
   # Draw AprilTag in the middle
   clip_path = c.beginPath()
@@ -202,24 +218,25 @@ if __name__ == '__main__':
   clip_path.lineTo(pattern_end_x, pattern_end_y)
   clip_path.lineTo(pattern_start_x, pattern_end_y)
   clip_path.lineTo(pattern_start_x, pattern_start_y)
+
   
   # Draw checkerboard
   c.clipPath(clip_path, stroke=0, fill=0)
-  
+
   for x in range(-1, squares_x):
     for y in range(0, squares_y + 1):
       center_x = pattern_start_x + (x + 1) * square_length
       center_y = pattern_start_y - y * square_length
-      
+
       path = c.beginPath()
-      
+
       # Draw all black segments
       for segment in range(0, num_star_segments, 2):
         path.moveTo(center_x, center_y)
-        
+
         sc1 = GetStarCoord(square_length, segment, num_star_segments, center_x, center_y)
         path.lineTo(sc1[0], sc1[1])
-        
+
         # Add point at the square corner?
         angle1 = (2 * math.pi) * (segment) / num_star_segments
         angle2 = (2 * math.pi) * (segment + 1) / num_star_segments
@@ -233,14 +250,15 @@ if __name__ == '__main__':
           corner_coord = (center_x - 0.5 * square_length * corner_x,
                           center_y + 0.5 * square_length * corner_y)
           path.lineTo(corner_coord[0], corner_coord[1])
-        
+
         sc2 = GetStarCoord(square_length, segment + 1, num_star_segments, center_x, center_y)
         path.lineTo(sc2[0], sc2[1])
-        
+
         path.lineTo(center_x, center_y)
-      
+
       c.drawPath(path, stroke=0, fill=1)
-  
+
+
   # Write metadata
   with open(metadata_path, 'wb') as metadata_file:
     metadata_file.write(bytes('num_star_segments: ' + str(num_star_segments) + '\n', 'UTF-8'))
